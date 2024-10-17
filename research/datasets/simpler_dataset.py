@@ -1,7 +1,6 @@
 import random
 from typing import Optional
 
-import h5py
 import numpy as np
 import torch
 import tensorflow as tf
@@ -47,7 +46,18 @@ class SimplerDataset(ReplayBuffer):
         return tf.concat(state_tensors, axis=-1)
 
     def _data_generator(self):
+        # Compute the worker info
+        worker_info = torch.utils.data.get_worker_info()
+        num_workers = 1 if worker_info is None else worker_info.num_workers
+        worker_id = 0 if worker_info is None else worker_info.id
+
         dataset = self._load_dataset()
+
+        # Shuffle the dataset
+        dataset = dataset.shuffle(buffer_size=10000)
+
+        # Split the dataset among workers
+        dataset = dataset.shard(num_shards=num_workers, index=worker_id)
 
         for episode in dataset:
             observations = episode['steps']['observation']
@@ -87,5 +97,3 @@ class SimplerDataset(ReplayBuffer):
             assert obs_len == len(action) == len(reward) == len(done) == len(discount)
 
             yield dict(obs=obs, action=action, reward=reward, done=done, discount=discount)
-
-        f.close()  # Close the file handler.

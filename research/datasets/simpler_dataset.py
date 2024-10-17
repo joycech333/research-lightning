@@ -53,7 +53,7 @@ class SimplerDataset(ReplayBuffer):
             observations = episode['steps']['observation']
             action = episode['steps']['action']
             reward = episode['steps']['reward']
-            dones = episode['steps']['dones']
+            discount = episode['steps']['discount']
 
             # Concatenate state keys
             obs = [self._concatenate_state_keys(obs) for obs in observations]
@@ -64,14 +64,23 @@ class SimplerDataset(ReplayBuffer):
             reward = np.array([reward[i].numpy() for i in range(len(reward))])
             dones = np.array([dones[i].numpy() for i in range(len(dones))])
 
-            # TODO: Get actual rewards
-            reward = np.concatenate(([0], f["data"][demo]["rewards"]), axis=0)
-            reward = utils.remove_float64(reward)
-
-            done = np.concatenate(([0], f["data"][demo]["dones"]), axis=0).astype(np.bool_)
-            done[-1] = True
-
-            discount = (1 - done).astype(np.float32)
+            # TODO: Manually designed reward
+            tcp_to_source_obj_pos = np.array([obs[i]['tcp_to_source_obj_pos'] for i in range(len(obs))])
+            source_obj_pose = np.array([obs[i]['source_obj_pose'] for i in range(len(obs))])
+            target_obj_pose = np.array([obs[i]['target_obj_pose'] for i in range(len(obs))])
+            """
+            reward = np.zeros(len(obs))
+            # 1) Minimize tcp_to_source_obj_pos
+            reward -= np.linalg.norm(tcp_to_source_obj_pos, axis=-1)
+            # 2) Penalize if tcp_to_source_obj_pos increases
+            for i in range(1, len(tcp_to_source_obj_pos)):
+                reward[i] -= np.linalg.norm(tcp_to_source_obj_pos[i] - tcp_to_source_obj_pos[i-1], axis=-1)
+            # 3) Minimize distance between source_obj_pose and target_obj_pose
+            reward -= np.linalg.norm(source_obj_pose - target_obj_pose, axis=-1)
+            """
+            
+            # NOTE: No dones collected in the dataset currently
+            done = (1 - discount).astype(np.bool)
 
             obs_len = obs[next(iter(obs.keys()))].shape[0]
             assert all([len(obs[k]) == obs_len for k in obs.keys()])

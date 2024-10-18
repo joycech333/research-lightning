@@ -3,10 +3,11 @@
 from gym.envs import register
 
 from .base import EmptyEnv
+from .simpler import SimplerEnvRLDSWrapper
 
 # Add things you explicitly want exported here.
 # Otherwise, all imports are deleted.
-__all__ = ["EmptyEnv"]
+__all__ = ["EmptyEnv", "SimplerEnvRLDSWrapper"]
 
 try:
     import gym_robotics
@@ -93,6 +94,11 @@ try:
     from .robomimic import RobomimicEnv
 except ImportError:
     print("[research] Skipping robomimic, package not found")
+
+try:
+    from .simpler import SimplerEnvRLDSWrapper
+except ImportError:
+    print("[research] Skipping simpler, package not found")
 
 try:
     from .franka import FrankaEnv, FrankaReach

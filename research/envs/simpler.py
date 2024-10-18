@@ -30,10 +30,10 @@ class SimplerEnvRLDSWrapper(gym.Wrapper):
     """
     
     def __init__(self,
-                 env,
+                 task,
                  initial_states_path=None,
                  resize_size=224):
-        self.env = env
+        self.env = simpler_env.make(task)
         self.resize_size = resize_size
         self.episode_idx = 0
         if initial_states_path == "eval":

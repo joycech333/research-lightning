@@ -14,11 +14,7 @@ network_kwargs:
   hidden_layers: [256, 256]
   ortho_init: True
 
-# Example config using Robomimic.
-# eval_env: RobomaticEnv
-# eval_env_kwargs:
-#   path: path/to/robomimic/dataset
-#   horizon: 500
+env: SimplerEnvRLDSWrapper
 
 dataset: SimplerDataset
 dataset_kwargs:

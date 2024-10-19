@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import gym
+import gymnasium
 import h5py
 import numpy as np
 import torch
@@ -133,10 +134,35 @@ def batch_copy(batch: Any) -> Any:
     return batch
 
 
+def convert_gymnasium_to_gym(space):
+    if isinstance(space, gymnasium.spaces.Dict):
+        # Convert Dict space by recursively processing its components
+        converted_dict = {}
+        for key, sub_space in space.spaces.items():
+            converted_dict[key] = convert_gymnasium_to_gym(sub_space)
+        return gym.spaces.Dict(converted_dict)
+
+    elif isinstance(space, gymnasium.spaces.Box):
+        # Convert Box space by creating a new gym.spaces.Box
+        return gym.spaces.Box(
+            low=space.low, 
+            high=space.high, 
+            shape=space.shape, 
+            dtype=space.dtype
+        )
+    return space
+
+
 def space_copy(space: gym.Space):
     # A custom method for copying gym spaces.
     # this is because numpy 1.24.0 changed how random states are stored, making them
     # unserializable by the copy library.
+    if isinstance(space, gymnasium.spaces.Dict):
+        space = convert_gymnasium_to_gym(space)
+        return space
+    if isinstance(space, gymnasium.spaces.Box):
+        space = convert_gymnasium_to_gym(space)
+        return space
     if isinstance(space, gym.spaces.Dict):
         return gym.spaces.Dict({k: space_copy(v) for k, v in space.items()})
     elif isinstance(space, gym.spaces.Box):

@@ -39,6 +39,9 @@ def _get_ep_idxs(storage: Storage, batch_size: int = 1, sample_by_timesteps: boo
             # Lower the lengths by the min_length - 1 to give the number of valid sequences.
             lengths = storage.lengths[ep_idxs] - (min_length - 1)
             p = lengths / lengths.sum()
+            # NOTE: This is just a hack because batch_size = None causes errors...
+            if batch_size is None:
+                batch_size = 1 
             ep_idxs = np.random.choice(ep_idxs, size=(batch_size,), replace=True, p=p)
         else:
             ep_idxs = ep_idxs[np.random.randint(0, len(ep_idxs), size=(batch_size,))]

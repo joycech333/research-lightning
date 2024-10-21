@@ -29,15 +29,15 @@ class SimplerDataset(ReplayBuffer):
         """
         Loads the dataset using `tfds.builder_from_directory`.
         """
-        split = 'train' if self.train else 'validation'
-        print(f"Loading data from: {self.dataset_path}")
-        builder = tfds.builder_from_directory(self.dataset_path)
+        split = 'train' # if self.train else 'validation'
+        print(f"Loading data from: {self.path}")
+        builder = tfds.builder_from_directory(self.path)
         dataset = builder.as_dataset(split=split)
         return dataset
     
     def _concatenate_state_keys(self, observation):
         """
-        Concatenates state keys from observation (state, target_obj_pose, source_obj_pose, tcp_to_source_obj_pos).
+        Concatenates state keys from 'extra' dict from observation (state, target_obj_pose, source_obj_pose, tcp_to_source_obj_pos).
         """
         state_tensors = []
         for key in self.state_keys:
@@ -60,25 +60,36 @@ class SimplerDataset(ReplayBuffer):
         dataset = dataset.shard(num_shards=num_workers, index=worker_id)
 
         for episode in dataset:
-            observations = episode['steps']['observation']
-            action = episode['steps']['action']
-            reward = episode['steps']['reward']
-            discount = episode['steps']['discount']
+            obs_list = []
+            action_list = []
+            reward_list = []
+            discount_list = []
 
-            # Concatenate state keys
-            obs = [self._concatenate_state_keys(obs) for obs in observations]
+            for step in episode['steps']:
+                observation = step['observation']
+                action = step['action']
+                reward = step['reward']
+                discount = step['discount']
+
+                # Concatenate state keys
+                obs_state = [self._concatenate_state_keys(observation)]
+
+                obs_list.append(obs_state)
+                action_list.append(action)
+                reward_list.append(reward)
+                discount_list.append(discount)
 
             # Convert to numpy arrays
-            obs = np.array([obs[i].numpy() for i in range(len(obs))])
-            action = np.array([action[i].numpy() for i in range(len(action))])
-            reward = np.array([reward[i].numpy() for i in range(len(reward))])
-            dones = np.array([dones[i].numpy() for i in range(len(dones))])
+            obs = np.array(obs_list)
+            action = np.array(action_list)
+            reward = np.array(reward_list)
+            discount = np.array(discount_list)
 
             # TODO: Manually designed reward
+            """
             tcp_to_source_obj_pos = np.array([obs[i]['tcp_to_source_obj_pos'] for i in range(len(obs))])
             source_obj_pose = np.array([obs[i]['source_obj_pose'] for i in range(len(obs))])
             target_obj_pose = np.array([obs[i]['target_obj_pose'] for i in range(len(obs))])
-            """
             reward = np.zeros(len(obs))
             # 1) Minimize tcp_to_source_obj_pos
             reward -= np.linalg.norm(tcp_to_source_obj_pos, axis=-1)
@@ -90,10 +101,9 @@ class SimplerDataset(ReplayBuffer):
             """
             
             # NOTE: No dones collected in the dataset currently
-            done = (1 - discount).astype(np.bool)
+            done = (1 - discount).astype(np.bool_)
 
-            obs_len = obs[next(iter(obs.keys()))].shape[0]
-            assert all([len(obs[k]) == obs_len for k in obs.keys()])
+            obs_len = obs.shape[0]
             assert obs_len == len(action) == len(reward) == len(done) == len(discount)
 
             yield dict(obs=obs, action=action, reward=reward, done=done, discount=discount)

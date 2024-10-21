@@ -191,7 +191,7 @@ class Algorithm(ABC):
 
     def setup_network(self, network_class: Type[torch.nn.Module], network_kwargs: Dict) -> None:
         self.network = network_class(
-            self.processor.observation_space, self.processor.action_space, **network_kwargs
+            self.processor._observation_space, self.processor._action_space, **network_kwargs
         ).to(self.device)
 
     def setup_optimizers(self) -> None:

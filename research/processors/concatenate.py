@@ -17,6 +17,15 @@ class Concatenate(Processor):
         obs_dim: int = -1,
         action_dim: int = -1,
     ) -> None:
+        
+        if isinstance(observation_space, gym.spaces.Dict):
+            # Concatenate all Box spaces from the 'extra' dict
+            extra_obs_space = observation_space["extra"]
+            low = np.concatenate([space.low for space in extra_obs_space.spaces.values()], axis=0)
+            high = np.concatenate([space.high for space in extra_obs_space.spaces.values()], axis=0)
+            # Replace the observation_space with the flattened 1D Box
+            observation_space = gym.spaces.Box(low=low, high=high, dtype=np.float32)
+        
         super().__init__(observation_space, action_space)
         self.concat_action = concat_action and isinstance(action_space, gym.spaces.Dict)
         self.action_dim = action_dim
@@ -33,8 +42,8 @@ class Concatenate(Processor):
     def observation_space(self):
         if self.concat_obs:
             # Concatenate the spaces on the last dim
-            low = np.concatenate([space.low for space in self._observation_space.values()], axis=self.obs_dim)
-            high = np.concatenate([space.high for space in self._observation_space.values()], axis=self.obs_dim)
+            low = np.concatenate([space.low for space in self._observation_space.spaces.values()], axis=0)
+            high = np.concatenate([space.high for space in self._observation_space.spaces.values()], axis=0)
             return gym.spaces.Box(low=low, high=high, dtype=np.float32)  # force float32 conversion
         else:
             return self._observation_space
@@ -57,7 +66,7 @@ class Concatenate(Processor):
             )
         for k in ("obs", "next_obs", "init_obs"):
             if self.concat_obs and k in batch:
-                batch[k] = torch.cat([batch[k][obs_key] for obs_key in self.obs_order], dim=self.forward_obs_dim)
+                batch[k] = torch.cat([batch[k]["extra"][obs_key] for obs_key in self.obs_order], dim=self.forward_obs_dim)
         return batch
 
 

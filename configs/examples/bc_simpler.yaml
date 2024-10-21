@@ -17,10 +17,11 @@ network_kwargs:
 env: SimplerEnvRLDSWrapper
 env_kwargs:
   task: widowx_carrot_on_plate
+  initial_states_path: train
 
 dataset: SimplerDataset
 dataset_kwargs:
-  path: ~/tensorflow_datasets/simpler_widowx_carrot_openvla_bridge_7b_temp1_0_rollouts
+  path: /iliad/u/joycech/tensorflow_datasets/simpler_widowx_carrot_openvla_bridge_7b_temp1_0_rollouts
   sample_fn: sample
   sample_kwargs:
     batch_size: 

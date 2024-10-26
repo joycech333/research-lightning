@@ -197,6 +197,9 @@ class OffPolicyAlgorithm(Algorithm):
             else:
                 obs = batch["obs"]
 
+            if isinstance(obs, dict):
+                obs = torch.cat([torch.tensor(value) for value in obs.values()], dim=-1)
+
             # Could be: Logits (discrete), Float (continuous), or torch Dist
             dist = self.network.actor(obs)
 

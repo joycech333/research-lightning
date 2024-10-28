@@ -1,3 +1,7 @@
+from typing import Optional
+import imageio
+from PIL import Image, ImageDraw
+
 import numpy as np
 import tensorflow as tf
 from transforms3d.euler import euler2axangle
@@ -32,16 +36,27 @@ class SimplerEnvRLDSWrapper(gym.Wrapper):
     def __init__(self,
                  task,
                  initial_states_path=None,
-                 resize_size=224):
+                 resize_size=224,
+                 terminate_early: bool = True,
+                 horizon: Optional[int] = 60):
         self.env = simpler_env.make(task)
         self.resize_size = resize_size
         self.episode_idx = 0
+
+        self.step_counter = 0 # Temporary counter for tracking steps
+        self.frames = [] # Temporary storage for producing gifs
+
         if initial_states_path == "eval":
             self.seed = 999
         elif initial_states_path == "train":
             self.seed = -1
         else:
             raise ValueError("Unsupported initial states path")
+        self.env.ignore_done = False
+        if horizon is not None:
+            self.env.horizon = horizon
+        self.env._max_episode_steps = self.env.horizon
+        self.terminate_early = terminate_early
 
     def _wrap_obs(self, obs):
 
@@ -54,11 +69,42 @@ class SimplerEnvRLDSWrapper(gym.Wrapper):
         }
 
     def step(self, action):
+        self.step_counter += 1
         action = convert_maniskill(action.copy())
         obs, reward, done, truncated, info = self.env.step(action)
+
+        # Capture the current observation as an image frame for the video
+        """
+        im = obs['image']['3rd_view_camera']['rgb']
+        pil_im = Image.fromarray(im).resize((640, 640))
+        draw = ImageDraw.Draw(pil_im)
+        draw.text((10, 10), f'STEP {self.step_counter} | REWARD {reward:.2f}')
+        draw.text((10, 30), str(list(action))) 
+        self.frames.append(np.array(pil_im))
+        """
+        
+        if self.terminate_early and self.step_counter >= self.env.horizon:
+            done = True
+            # print(f"Episode {self.episode_idx} has ended at step {self.step_counter}")
+
+        """
+        print("\nConverted action: ", action, " Done: ", done)
+        print("\nRaw Observation: ", obs['extra'])
+        print("\nWrapped Observation: ", self._wrap_obs(obs))
+
+        # If episode done, save video
+        if done:
+            video_filename = f'rewards_carrot_vid{self.episode_idx}.mp4'
+            imageio.mimwrite(video_filename, self.frames, fps=10)
+            print(f"Video saved as {video_filename}")
+        """
+
         return self._wrap_obs(obs), float(reward), done, info
 
     def reset(self, seed=None):
+        self.step_counter = 0
+        self.episode_idx += 1
+        self.frames = []
         if seed is not None:
             self.seed = seed
         else:
@@ -79,11 +125,3 @@ def get_simpler_env(task, model_family, initial_states_path=None, resize_size=22
     if model_family == "octo":
         env = TemporalEnsembleWrapper(env, pred_horizon=4)
     return env
-
-
-def get_simpler_dummy_action(model_family: str):
-    if model_family == "octo":
-        # TODO: don't hardcode the action horizon for Octo
-        return np.tile(np.array([0, 0, 0, 0, 0, 0, -1])[None], (4, 1))
-    else:
-        return np.array([0, 0, 0, 0, 0, 0, -1])

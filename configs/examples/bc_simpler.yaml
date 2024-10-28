@@ -24,7 +24,7 @@ dataset_kwargs:
   path: /iliad/u/joycech/tensorflow_datasets/simpler_widowx_carrot_openvla_bridge_7b_temp1_0_rollouts
   sample_fn: sample
   sample_kwargs:
-    batch_size: 
+    batch_size: 256
 validation_dataset_kwargs:
   train: False
 
@@ -39,6 +39,7 @@ trainer_kwargs: # Arguments given to Algorithm.train
   eval_fn: eval_policy
   eval_kwargs:
     num_ep: 10 # Number of enviornment episodes to run for evaluation, or -1 if none should be run.
+    terminate_on_success: True
   loss_metric: reward # The validation metric that determines when to save the "best_checkpoint"
   max_validation_steps: 25 # Will run forever otherwise due to continuous replay buffer iter.
   train_dataloader_kwargs:

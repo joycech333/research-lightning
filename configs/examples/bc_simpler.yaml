@@ -18,6 +18,7 @@ env: SimplerEnvRLDSWrapper
 env_kwargs:
   task: widowx_carrot_on_plate
   initial_states_path: train
+  horizon: 60
 
 dataset: SimplerDataset
 dataset_kwargs:

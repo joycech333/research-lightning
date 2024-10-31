@@ -62,9 +62,9 @@ class SimplerEnvRLDSWrapper(gym.Wrapper):
 
         # Generate action with model.
         return {
-            "state": obs["extra"]["tcp_pose"],
             "source_obj_pose": obs["extra"]["source_obj_pose"],
             "target_obj_pose": obs["extra"]["target_obj_pose"],
+            "state": obs["extra"]["tcp_pose"],
             "tcp_to_source_obj_pos": obs["extra"]["tcp_to_source_obj_pos"],
         }
 
@@ -72,32 +72,31 @@ class SimplerEnvRLDSWrapper(gym.Wrapper):
         self.step_counter += 1
         action = convert_maniskill(action.copy())
         obs, reward, done, truncated, info = self.env.step(action)
-
-        # Capture the current observation as an image frame for the video
-        """
-        im = obs['image']['3rd_view_camera']['rgb']
-        pil_im = Image.fromarray(im).resize((640, 640))
-        draw = ImageDraw.Draw(pil_im)
-        draw.text((10, 10), f'STEP {self.step_counter} | REWARD {reward:.2f}')
-        draw.text((10, 30), str(list(action))) 
-        self.frames.append(np.array(pil_im))
-        """
-        
         if self.terminate_early and self.step_counter >= self.env.horizon:
             done = True
-            # print(f"Episode {self.episode_idx} has ended at step {self.step_counter}")
+            print(f"Episode {self.episode_idx} has ended at step {self.step_counter}")
 
         """
         print("\nConverted action: ", action, " Done: ", done)
         print("\nRaw Observation: ", obs['extra'])
         print("\nWrapped Observation: ", self._wrap_obs(obs))
-
-        # If episode done, save video
-        if done:
-            video_filename = f'rewards_carrot_vid{self.episode_idx}.mp4'
-            imageio.mimwrite(video_filename, self.frames, fps=10)
-            print(f"Video saved as {video_filename}")
         """
+        
+        if self.episode_idx % 20 == 0:
+            # Capture the current observation as an image frame for the video
+            im = obs['image']['3rd_view_camera']['rgb']
+            pil_im = Image.fromarray(im).resize((640, 640))
+            draw = ImageDraw.Draw(pil_im)
+            draw.text((10, 10), f'STEP {self.step_counter} | REWARD {reward:.2f}')
+            draw.text((10, 30), str(list(action))) 
+            self.frames.append(np.array(pil_im))
+            
+            # If episode done, save video
+            if done:
+                video_filename = f'rewards_carrot_vid{self.episode_idx}_v2.mp4'
+                imageio.mimwrite(video_filename, self.frames, fps=10)
+                print(f"Video saved as {video_filename}")
+        
 
         return self._wrap_obs(obs), float(reward), done, info
 

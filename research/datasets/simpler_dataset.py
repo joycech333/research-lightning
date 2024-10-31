@@ -22,7 +22,7 @@ class SimplerDataset(ReplayBuffer):
         self.action_eps = action_eps
         self.train = train
         # keys required to construct the full state
-        self.state_keys = ['state', 'target_obj_pose', 'source_obj_pose', 'tcp_to_source_obj_pos']
+        self.state_keys = ['source_obj_pose', 'target_obj_pose', 'state', 'tcp_to_source_obj_pos']
         super().__init__(observation_space, action_space, *args, **kwargs)
 
     def _load_dataset(self):

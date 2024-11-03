@@ -44,7 +44,6 @@ dataset_kwargs:
     sample_by_timesteps: False
   capacity: 10000
   fetch_every: 500
-  distributed: true
 
 processor: Concatenate
 
@@ -57,6 +56,3 @@ trainer_kwargs: # Arguments given to Algorithm.train
   eval_kwargs:
     num_ep: 10 # Number of enviornment episodes to run for evaluation, or -1 if none should be run.
   loss_metric: reward # The validation metric that determines when to save the "best_checkpoint"
-  train_dataloader_kwargs:
-    batch_size: 256
-    num_workers: 4 # Number of dataloader workers.

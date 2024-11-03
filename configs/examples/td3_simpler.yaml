@@ -1,23 +1,31 @@
-alg: BehaviorCloning
+# Example Config that uses almost all values
+
+alg: TD3
 alg_kwargs:
-  # Configure offline steps. These aren't needed, but good to set.
-  offline_steps: -1
-  random_steps: 0
+  tau: 0.005
+  policy_noise: 0.1
+  target_noise: 0.2
+  noise_clip: 0.5
+  critic_freq: 1
+  actor_freq: 2
+  target_freq: 2
+  random_steps: 10000
 
-optim: AdamW
+optim: Adam
 optim_kwargs:
-  lr: 0.0001
-  betas:
-    - 0.95
-    - 0.999
-  eps: 1.0e-08
-  weight_decay: 1.0e-06
+  lr: 0.001
 
-network: ActorPolicy
+network: ActorCriticPolicy
 network_kwargs:
   actor_class: ContinuousMLPActor
-  hidden_layers: [256, 256]
-  ortho_init: True
+  actor_kwargs:
+    hidden_layers: [256, 256]
+    output_act: ["import", "torch.nn", "Tanh"]
+  critic_class: ContinuousMLPCritic
+  critic_kwargs:
+    hidden_layers: [256, 256]
+    ensemble_size: 2
+  ortho_init: true
 
 env: SimplerEnvRLDSWrapper
 env_kwargs:
@@ -28,13 +36,16 @@ env_kwargs:
 dataset: SimplerDataset
 dataset_kwargs:
   path: /iliad/u/joycech/tensorflow_datasets/simpler_widowx_carrot_openvla_bridge_7b_temp1_0_rollouts
-  sample_fn: sample
+  sample_fn: sample_qlearning
   sample_kwargs:
-    batch_size: 256
-validation_dataset_kwargs:
-  train: False
+    discount: 0.99
+    nstep: 1
+    batch_size: 64
+    sample_by_timesteps: False
+  capacity: 10000
+  fetch_every: 500
+  distributed: true
 
-schedule: null
 processor: Concatenate
 
 trainer_kwargs: # Arguments given to Algorithm.train
@@ -45,9 +56,7 @@ trainer_kwargs: # Arguments given to Algorithm.train
   eval_fn: eval_policy
   eval_kwargs:
     num_ep: 10 # Number of enviornment episodes to run for evaluation, or -1 if none should be run.
-    terminate_on_success: True
   loss_metric: reward # The validation metric that determines when to save the "best_checkpoint"
-  max_validation_steps: 25 # Will run forever otherwise due to continuous replay buffer iter.
   train_dataloader_kwargs:
-    num_workers: 0 # Number of dataloader workers.
-    batch_size: null
+    batch_size: 256
+    num_workers: 4 # Number of dataloader workers.

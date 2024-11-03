@@ -108,7 +108,17 @@ def get_from_batch(batch: Any, start: Union[int, np.ndarray, torch.Tensor], end:
 def set_in_batch(batch: Any, value: Any, start: int, end: Optional[int] = None) -> None:
     if isinstance(batch, dict):
         for k, v in batch.items():
-            set_in_batch(v, value[k], start, end=end)
+            if k not in value:
+                continue
+            if isinstance(v, dict):
+                # Handle nested dictionary
+                set_in_batch(v, value[k], start, end=end)
+            else:
+                # Handle leaf node (data array)
+                if end is None:
+                    v[start] = value[k]
+                else:
+                    v[start:end] = value[k]
     elif isinstance(batch, (list, tuple)):
         for v in batch:
             set_in_batch(v, value, start, end=end)

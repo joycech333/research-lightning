@@ -31,7 +31,7 @@ network_kwargs:
   critic_class: ContinuousMLPCritic
   critic_kwargs:
     hidden_layers: [256, 256]
-    ensemble_size: 4
+    ensemble_size: 2
   ortho_init: true
 
 env: SimplerEnvRLDSWrapper
@@ -47,10 +47,11 @@ dataset_kwargs:
   sample_kwargs:
     discount: 0.99
     nstep: 1
-    batch_size: 64
+    batch_size: 256
     sample_by_timesteps: False
-  capacity: 10000
+  capacity: 1000000
   fetch_every: 500
+  distributed: True
 
 processor: Concatenate
 
@@ -65,3 +66,5 @@ trainer_kwargs: # Arguments given to Algorithm.train
     terminate_on_success: True
   loss_metric: reward # The validation metric that determines when to save the "best_checkpoint"]
   max_validation_steps: 25
+  train_dataloader_kwargs:
+    num_workers: 4 # Number of dataloader workers.

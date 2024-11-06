@@ -109,16 +109,6 @@ class TD3(OffPolicyAlgorithm):
         batch["obs"] = self.network.encoder(batch["obs"])
         with torch.no_grad():
             batch["next_obs"] = self.target_network.encoder(batch["next_obs"])
-            # Hacky conversion of dict obs to tensor for actor & critic updates
-            next_state_tensors = []
-            for key in batch['next_obs']['extra'].keys():
-                next_state_tensors.append(batch['next_obs']['extra'][key])
-            batch["next_obs"] = torch.cat(next_state_tensors, axis=-1)
-        
-        state_tensors = []
-        for key in batch['obs']['extra'].keys():
-            state_tensors.append(batch['obs']['extra'][key])
-        batch["obs"] = torch.cat(state_tensors, axis=-1)
 
         if step % self.critic_freq == 0:
             metrics = self._update_critic(batch)

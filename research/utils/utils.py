@@ -104,18 +104,10 @@ def get_from_batch(batch: Any, start: Union[int, np.ndarray, torch.Tensor], end:
     else:
         raise ValueError("Unsupported type passed to `get_from_batch`")
 
-
 def set_in_batch(batch: Any, value: Any, start: int, end: Optional[int] = None) -> None:
-    # Special case to replace the entire "obs" key with a new array, discarding the dictionary structure in batch["obs"]
-    if isinstance(batch, dict) and "obs" in batch and isinstance(value, dict) and "obs" in value:
-        batch["obs"] = value["obs"]
     if isinstance(batch, dict):
-        # There are already infs in the batch observation here
         for k, v in batch.items():
-            if k not in value:
-                continue
-            if k != "obs": # skip obs key
-                set_in_batch(v, value[k], start, end=end)
+            set_in_batch(v, value[k], start, end=end)
     elif isinstance(batch, (list, tuple)):
         for v in batch:
             set_in_batch(v, value, start, end=end)
@@ -126,7 +118,6 @@ def set_in_batch(batch: Any, value: Any, start: int, end: Optional[int] = None) 
             batch[start:end] = value
     else:
         raise ValueError("Unsupported type passed to `set_in_batch`")
-
 
 def batch_copy(batch: Any) -> Any:
     if isinstance(batch, dict):

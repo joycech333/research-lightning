@@ -6,9 +6,26 @@ import numpy as np
 import tensorflow as tf
 from transforms3d.euler import euler2axangle
 import gym
+from research.utils import utils
 
-from experiments.utils import TemporalEnsembleWrapper, normalize_gripper_action
 import simpler_env
+
+def normalize_gripper_action(action):
+    """
+    Changes gripper action (last dimension of action vector) from [0,1] to [-1,+1].
+    This is necessary because the dataset wrapper standardizes gripper actions to [0,1].
+    Note that unlike the other action dimensions, the gripper action is not normalized to [-1,+1]
+    by default by the dataset wrapper.
+
+    Normalization formula: y = 2 * (x - orig_low) / (orig_high - orig_low) - 1
+    """
+    # To implement, just normalize the last action to [-1,+1].
+    orig_low, orig_high = 0.0, 1.0
+    if len(action.shape) > 1:
+        action[..., -1] = 2 * (action[..., -1] - orig_low) / (orig_high - orig_low) - 1
+    else:
+        action[-1] = 2 * (action[-1] - orig_low) / (orig_high - orig_low) - 1
+    return action
 
 def convert_maniskill(action):
     """
@@ -33,18 +50,22 @@ class SimplerEnvRLDSWrapper(gym.Wrapper):
     Will also follow this up with some number of init steps if specified (num_init_steps), before returning.
     """
     
-    def __init__(self,
-                 task,
-                 initial_states_path=None,
-                 resize_size=224,
-                 terminate_early: bool = True,
-                 horizon: Optional[int] = 60):
+    def __init__(
+        self,
+        task,
+        initial_states_path=None,
+        resize_size=224,
+        terminate_early: bool = True,
+        horizon: Optional[int] = 60,
+        use_image: bool = False,
+    ):
         self.env = simpler_env.make(task)
         self.resize_size = resize_size
         self.episode_idx = 0
 
         self.step_counter = 0 # Temporary counter for tracking steps
         self.frames = [] # Temporary storage for producing gifs
+        self.use_image = use_image
 
         if initial_states_path == "eval":
             self.seed = 999
@@ -57,16 +78,30 @@ class SimplerEnvRLDSWrapper(gym.Wrapper):
             self.env.horizon = horizon
         self.env._max_episode_steps = self.env.horizon
         self.terminate_early = terminate_early
+        gym_space = utils.convert_gymnasium_to_gym(self.env.observation_space)
+        spaces=dict(
+            source_obj_pose=gym_space["extra"]["source_obj_pose"],
+            target_obj_pose=gym_space["extra"]["target_obj_pose"],
+            state=gym_space["extra"]["tcp_pose"],
+            tcp_to_source_obj_pos=gym_space["extra"]["tcp_to_source_obj_pos"],
+        )
+        if use_image:
+            spaces["image"] = obs["image"]
+        self.observation_space = gym.spaces.Dict(spaces)
+        self.action_space = self.env.action_space
 
     def _wrap_obs(self, obs):
 
         # Generate action with model.
-        return {
+        wrapped_obs = {
             "source_obj_pose": obs["extra"]["source_obj_pose"],
             "target_obj_pose": obs["extra"]["target_obj_pose"],
             "state": obs["extra"]["tcp_pose"],
             "tcp_to_source_obj_pos": obs["extra"]["tcp_to_source_obj_pos"],
         }
+        if self.use_image:
+            wrapped_obs["image"] = obs["image"]
+        return wrapped_obs
 
     def step(self, action):
         self.step_counter += 1

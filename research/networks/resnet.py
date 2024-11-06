@@ -18,7 +18,7 @@ class RobomimicEncoder(torch.nn.Module):
         num_kp: int = 64,
         pretrain: bool = False,
         freeze_resnet: bool = False,
-        backbone: Union[18, 34, 50] = 18,
+        backbone: int = 18,
         use_group_norm: bool = False,
         feature_dim: Optional[int] = None,
     ):

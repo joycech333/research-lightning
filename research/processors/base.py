@@ -102,5 +102,9 @@ class Compose(Processor):
 
     def unprocess(self, batch: Any) -> Any:
         for processor in reversed(self.processors):
-            batch = processor.unprocess(batch)
+            # if the processor has an explicitly defined unprocess method, use it, else skip
+            if "unprocess" in type(processor).__dict__:
+                batch = processor.unprocess(batch)
+            else:
+                continue
         return batch

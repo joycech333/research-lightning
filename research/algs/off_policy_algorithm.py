@@ -190,7 +190,7 @@ class OffPolicyAlgorithm(Algorithm):
 
     def _predict(
         self, batch: Dict, sample: bool = False, noise: float = 0.0, noise_clip: Optional[float] = None, temperature=1.0
-    ) -> torch.Tensor:
+    , **kwargs) -> torch.Tensor:
         with torch.no_grad():
             if isinstance(self.network, ModuleContainer) and "encoder" in self.network.CONTAINERS:
                 obs = self.network.encoder(batch["obs"])
@@ -236,6 +236,11 @@ class OffPolicyAlgorithm(Algorithm):
                         eps = torch.clamp(eps, -noise_clip, noise_clip)
                     action = action + eps
                 action = action.clamp(*self.action_range)
+                
+                # At eval time, if kwargs include unprocess, then unprocess the action.
+                if not self.training and kwargs.get("unprocess", True):
+                    self.processor.unprocess({"action": action})
+                
                 return action
 
             elif isinstance(self.processor.action_space, gym.spaces.Discrete):

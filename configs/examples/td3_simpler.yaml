@@ -60,7 +60,7 @@ processor_kwargs:
   - ["Concatenate", {}]
   - ["MinMaxActionNormalizer", 
       {
-        "low": [-0.03, -0.02, -0.03, -0.08, -0.09, -0.04, -1.0],
+        "low": [-0.03, -0.02, -0.03, -0.08, -0.09, -0.04, 0.0],
         "high": [0.03, 0.03, 0.04, 0.07, 0.05, 0.11, 1.0]
       }
     ]
@@ -76,6 +76,7 @@ trainer_kwargs: # Arguments given to Algorithm.train
   eval_kwargs:
     num_ep: 10 # Number of enviornment episodes to run for evaluation, or -1 if none should be run.
     terminate_on_success: True
+    predict_kwargs: {unprocess: True}
   loss_metric: reward # The validation metric that determines when to save the "best_checkpoint"]
   max_validation_steps: 25
   train_dataloader_kwargs:

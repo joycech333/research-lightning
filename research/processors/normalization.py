@@ -220,24 +220,36 @@ class MinMaxActionNormalizer(Processor):
 
     def forward(self, batch: Dict):
         # Process the batch to be the correct shape
-        action = batch["action"]
+        if "action" in batch:
+            action = batch["action"]
 
-        # Convert bounds to tensors on the right device
-        device_low = torch.from_numpy(self.low).to(action.device)
-        device_high = torch.from_numpy(self.high).to(action.device)
-        device_output_low = torch.tensor(self.output_low, device=action.device)
-        device_output_high = torch.tensor(self.output_high, device=action.device)
-        
-        # Normalize to 0 to 1, then scale to output range
-        action = (action - device_low) / (device_high - device_low)
-        action = action * (device_output_high - device_output_low) + device_output_low
-        batch["action"] = action
+            # Convert bounds to tensors on the right device
+            device_low = torch.from_numpy(self.low).to(action.device)
+            device_high = torch.from_numpy(self.high).to(action.device)
+            device_output_low = torch.tensor(self.output_low, device=action.device)
+            device_output_high = torch.tensor(self.output_high, device=action.device)
+            
+            # Normalize to 0 to 1, then scale to output range
+            action = (action - device_low) / (device_high - device_low)
+            action = action * (device_output_high - device_output_low) + device_output_low
+            batch["action"] = action
+
         return batch
 
     def unprocess(self, batch: Dict) -> Dict:
         # Replace the action to be the correct
-        action = batch["action"]
-        action = (action - self.output_low) / (self.output_high - self.output_low)
-        action = action * (self.high - self.low) + self.low
-        batch["action"] = action
+        if "action" in batch:
+            action = batch["action"]
+
+            # Convert bounds to tensors on the right device
+            device_low = torch.from_numpy(self.low).to(action.device)
+            device_high = torch.from_numpy(self.high).to(action.device)
+            device_output_low = torch.tensor(self.output_low, device=action.device)
+            device_output_high = torch.tensor(self.output_high, device=action.device)
+
+            # Denormalize action to original env range
+            action = (action - device_output_low) / (device_output_high - device_output_low)
+            action = action * (device_high - device_low) + device_low
+            batch["action"] = action
+
         return batch

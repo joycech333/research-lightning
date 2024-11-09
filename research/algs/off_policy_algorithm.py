@@ -237,9 +237,7 @@ class OffPolicyAlgorithm(Algorithm):
                     action = action + eps
                 action = action.clamp(*self.action_range)
                 
-                # At eval time, if kwargs include unprocess, then unprocess the action.
-                if not self.training and kwargs.get("unprocess", True):
-                    self.processor.unprocess({"action": action})
+                self.processor.unprocess({"action": action})
                 
                 return action
 

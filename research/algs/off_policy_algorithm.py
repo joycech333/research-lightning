@@ -237,7 +237,7 @@ class OffPolicyAlgorithm(Algorithm):
                     action = action + eps
                 action = action.clamp(*self.action_range)
                 
-                self.processor.unprocess({"action": action})
+                action = self.processor.unprocess({"action": action})["action"]
                 
                 return action
 

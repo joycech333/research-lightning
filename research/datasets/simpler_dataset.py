@@ -36,11 +36,7 @@ class SimplerDataset(ReplayBuffer):
         return dataset
 
     def _data_generator(self):
-        # Compute the worker info
-        worker_info = torch.utils.data.get_worker_info()
-        num_workers = 1 if worker_info is None else worker_info.num_workers
-        worker_id = 0 if worker_info is None else worker_info.id
-
+        
         dataset = self._load_dataset()
 
         for episode in dataset:

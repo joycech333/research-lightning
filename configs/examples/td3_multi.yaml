@@ -36,8 +36,7 @@ env_kwargs:
 
 dataset: MultiReplayBuffer
 buffer_kwargs:
-  buffer_name: demos
-  config:
+  demos_kwargs:
     path: /iliad/u/joycech/tensorflow_datasets/simpler_widowx_carrot_openvla_bridge_7b_temp1_0_rollouts
     sample_fn: sample_qlearning
     sample_kwargs:
@@ -45,17 +44,13 @@ buffer_kwargs:
       nstep: 1
       batch_size: 256
       sample_by_timesteps: False
-  buffer_name: online
-  config:
+  online_kwargs:
     sample_fn: sample_qlearning
     sample_kwargs:
       discount: 0.99
       nstep: 1
       batch_size: 256
       sample_by_timesteps: False
-    capacity: 1000000
-    fetch_every: 500
-  distributed: False
   capacity: 1000000
   fetch_every: 500
   distributed: False

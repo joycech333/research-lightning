@@ -43,12 +43,6 @@ class SimplerDataset(ReplayBuffer):
 
         dataset = self._load_dataset()
 
-        # Shuffle the dataset
-        dataset = dataset.shuffle(buffer_size=10000)
-
-        # Split the dataset among workers
-        dataset = dataset.shard(num_shards=num_workers, index=worker_id)
-
         for episode in dataset:
             # Need dummy transition at start
             obs_list = []

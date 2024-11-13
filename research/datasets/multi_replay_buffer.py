@@ -40,21 +40,17 @@ class MultiReplayBuffer(torch.utils.data.IterableDataset):
     def update_weights(self):
         if self.batch_weights != "uniform":
             return
-        num_episodes = []
-        for buffer_name, buffer in self.buffers.items():
-            # Hacky, will fix: Hardcode num_episodes to 300 if buffer is 'demos'
-            if buffer_name == "demos":
-                num_episodes.append(300)
-            else:
-                if hasattr(buffer, "episode_filenames"):
-                    num_episodes.append(len(buffer.episode_filenames))
-                else:
-                    num_episodes.append(0)
-        total_episodes = sum(num_episodes)
-        if total_episodes > 0:
-            for i, (buffer_name, buffer) in enumerate(self.buffers.items()):
-                # Use the corresponding episode count
-                self._batch_weights[buffer_name] = num_episodes[i] / total_episodes
+        step_counts = {buffer_name: buffer._storage.size for buffer_name, buffer in self.buffers.items()}
+        # Uniform sampling until the size of the online buffer reaches that of the demos buffer
+        if step_counts["online"] < step_counts["demos"]:
+            total_steps = step_counts["online"] + step_counts["demos"]
+            self._batch_weights = {
+                "online": step_counts["online"] / total_steps,
+                "demos": step_counts["demos"] / total_steps
+            }
+        # 50/50 sampling when the online buffer contains more steps
+        else:
+            self._batch_weights = {buffer_name: 1 / len(self.buffers) for buffer_name in self.buffers}
 
     def add(self, buffer_name, **kwargs):
         assert buffer_name in self.buffers, f"'{buffer_name}' not a buffer"

@@ -5,3 +5,4 @@ from .robomimic_dataset import RobomimicDataset
 from .rollout_buffer import RolloutBuffer
 from .wgcsl_dataset import WGCSLDataset
 from .simpler_dataset import SimplerDataset
+from .multi_replay_buffer import MultiReplayBuffer

@@ -37,28 +37,24 @@ class MultiReplayBuffer(torch.utils.data.IterableDataset):
                 self.buffers[buffer_name] = ReplayBuffer(observation_space, action_space, **config)
             self.buffer_keys.append(buffer_name)
 
-    def get_policyID_counts(self):
-        self.key_counts = {
-            PolicyID.PRE_HUMAN_INTERVENTION.value: 0,
-            PolicyID.HUMAN_INTERVENTION.value: 0,
-            PolicyID.HUMAN.value: 0,
-            PolicyID.MODEL.value: 0,
-        }
-        for _buffer_name, buffer in self.buffers.items():
-            buffer_counts = buffer.get_policyID_counts()
-            for key, value in buffer_counts.items():
-                self.key_counts[key] += value
-
-        return self.key_counts
-
     def update_weights(self):
         if self.batch_weights != "uniform":
             return
-        num_episodes = [len(buffer.episode_filenames) for buffer in self.buffers.values()]
+        num_episodes = []
+        for buffer_name, buffer in self.buffers.items():
+            # Hacky, will fix: Hardcode num_episodes to 300 if buffer is 'demos'
+            if buffer_name == "demos":
+                num_episodes.append(300)
+            else:
+                if hasattr(buffer, "episode_filenames"):
+                    num_episodes.append(len(buffer.episode_filenames))
+                else:
+                    num_episodes.append(0)
         total_episodes = sum(num_episodes)
         if total_episodes > 0:
-            for buffer_name, buffer in self.buffers.items():
-                self._batch_weights[buffer_name] = len(buffer.episode_filenames) / total_episodes
+            for i, (buffer_name, buffer) in enumerate(self.buffers.items()):
+                # Use the corresponding episode count
+                self._batch_weights[buffer_name] = num_episodes[i] / total_episodes
 
     def add(self, buffer_name, **kwargs):
         assert buffer_name in self.buffers, f"'{buffer_name}' not a buffer"
@@ -103,6 +99,7 @@ class MultiReplayBuffer(torch.utils.data.IterableDataset):
                         new_batch
                         if concatenated_batch is None
                         else utils.concatenate(concatenated_batch, new_batch, dim=0)
+                        if new_batch else concatenated_batch
                     )
                 except StopIteration:
                     empty_iters += 1

@@ -10,7 +10,7 @@ import gym
 import numpy as np
 import torch
 
-from research.datasets import ReplayBuffer
+from research.datasets import ReplayBuffer, MultiReplayBuffer
 from research.datasets.replay_buffer import storage
 from research.envs.base import EmptyEnv
 from research.networks.base import ModuleContainer
@@ -47,7 +47,7 @@ class OffPolicyAlgorithm(Algorithm):
             env.reset_send()  # Ask the env to start resetting.
             self.env_step = self._async_env_step
         elif isinstance(env, runners.MPRunner):
-            assert isinstance(self.dataset, ReplayBuffer), "must use replaybuffer for MP RUnner."
+            assert isinstance(self.dataset, (ReplayBuffer, MultiReplayBuffer)), "must use replaybuffer for MP RUnner."
             assert self.dataset.distributed, "ReplayBuffer must be distributed for use with Fully MPRunner."
             # Launch the runner subprocess.
             self._eps_since_last_checkpoint = 0
@@ -72,7 +72,10 @@ class OffPolicyAlgorithm(Algorithm):
             # Note that currently the very first (s, a) pair is thrown away because
             # we don't add to the dataset here.
             # This was done for better compatibility for offline to online learning.
-            self.dataset.add(obs=self._current_obs)  # add the first observation.
+            if isinstance(self.dataset, MultiReplayBuffer):    
+                self.dataset.add(buffer_name="online", obs=self._current_obs) # add only to online buffer
+            else:
+                self.dataset.add(obs=self._current_obs)  # add the first observation.
             self.env_step = self._env_step
         else:
             raise ValueError("Invalid env passed")
@@ -108,7 +111,10 @@ class OffPolicyAlgorithm(Algorithm):
             discount = 1 - float(done)
 
         # Store the consequences.
-        self.dataset.add(obs=next_obs, action=action, reward=reward, done=done, discount=discount)
+        if isinstance(self.dataset, MultiReplayBuffer):
+            self.dataset.add(buffer_name="online", obs=next_obs, action=action, reward=reward, done=done, discount=discount)
+        else:
+            self.dataset.add(obs=next_obs, action=action, reward=reward, done=done, discount=discount)
 
         if done:
             self._num_ep += 1
@@ -118,7 +124,10 @@ class OffPolicyAlgorithm(Algorithm):
             )
             # Reset the environment
             self._current_obs = env.reset()
-            self.dataset.add(obs=self._current_obs)  # Add the first timestep
+            if isinstance(self.dataset, MultiReplayBuffer):    
+                self.dataset.add(buffer_name="online", obs=self._current_obs)
+            else:    
+                self.dataset.add(obs=self._current_obs) # Add the first timestep
             self._episode_length = 0
             self._episode_reward = 0
             return metrics

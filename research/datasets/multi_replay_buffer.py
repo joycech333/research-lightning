@@ -41,8 +41,8 @@ class MultiReplayBuffer(torch.utils.data.IterableDataset):
         if self.batch_weights != "uniform":
             return
         step_counts = {buffer_name: buffer._storage.size for buffer_name, buffer in self.buffers.items()}
-        # Uniform sampling until the size of the online buffer reaches that of the demos buffer
-        if step_counts["online"] < step_counts["demos"]:
+        # Uniform sampling until the size of the online buffer reaches that of half the demos buffer
+        if step_counts["online"] < (step_counts["demos"] / 2):
             total_steps = step_counts["online"] + step_counts["demos"]
             self._batch_weights = {
                 "online": step_counts["online"] / total_steps,
@@ -85,23 +85,32 @@ class MultiReplayBuffer(torch.utils.data.IterableDataset):
             concatenated_batch = None
             self.update_weights()
             empty_iters = 0
-            for buffer_name in self.buffer_keys:
+            remaining_batch_size = self.batch_size
+            for i, buffer_name in self.buffer_keys:
                 try:
-                    og_batch_size = self.batch_size
-                    new_batch_size = int(og_batch_size * self._batch_weights[buffer_name])
+                    # Calculate the batch size for the current buffer
+                    if i < len(self.buffer_keys) - 1:
+                        new_batch_size = int(self._batch_weights[buffer_name] * self.batch_size)
+                    else:
+                        # Ensure the sum of the batch sizes is equal to the total batch size
+                        new_batch_size = remaining_batch_size
+                    # Update remaining size
+                    remaining_batch_size -= new_batch_size
+
                     self.buffers[buffer_name].sample_fn.keywords["batch_size"] = new_batch_size
                     new_batch = next(self.iters[buffer_name])
                     concatenated_batch = (
                         new_batch
                         if concatenated_batch is None
                         else utils.concatenate(concatenated_batch, new_batch, dim=0)
-                        if new_batch else concatenated_batch
+                        if new_batch
+                        else concatenated_batch
                     )
+
                 except StopIteration:
                     empty_iters += 1
-            if empty_iters == len(self.iters):
-                break
-            if concatenated_batch is None:
+
+            if empty_iters == len(self.iters) or concatenated_batch is None:
                 break
 
             yield concatenated_batch

@@ -341,6 +341,10 @@ class ReplayBuffer(torch.utils.data.IterableDataset):
             if self._storage.size < seq_size * stack_size + 1:
                 yield {}  # If the buffer is too small for sampling, continue.
             else:
+                # Note: without this line, batch_size would be set to 1 within the While
+                batch_size = self.sample_fn.keywords.get("batch_size", 1)
+                stack_size = self.sample_fn.keywords.get("stack", 1)
+                seq_size = self.sample_fn.keywords.get("seq_length", 1)
                 sample = self.sample_fn(self._storage)
                 if batch_size == 1:
                     sample = utils.squeeze(sample, 0)

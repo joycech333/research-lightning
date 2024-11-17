@@ -199,15 +199,12 @@ class OffPolicyAlgorithm(Algorithm):
 
     def _predict(
         self, batch: Dict, sample: bool = False, noise: float = 0.0, noise_clip: Optional[float] = None, temperature=1.0
-    , **kwargs) -> torch.Tensor:
+        ) -> torch.Tensor:
         with torch.no_grad():
             if isinstance(self.network, ModuleContainer) and "encoder" in self.network.CONTAINERS:
                 obs = self.network.encoder(batch["obs"])
             else:
                 obs = batch["obs"]
-
-            if isinstance(obs, dict):
-                obs = torch.cat([torch.tensor(value) for value in obs.values()], dim=-1)
 
             # Could be: Logits (discrete), Float (continuous), or torch Dist
             dist = self.network.actor(obs)

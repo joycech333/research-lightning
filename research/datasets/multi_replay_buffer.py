@@ -86,7 +86,7 @@ class MultiReplayBuffer(torch.utils.data.IterableDataset):
             self.update_weights()
             empty_iters = 0
             remaining_batch_size = self.batch_size
-            for i, buffer_name in self.buffer_keys:
+            for i, buffer_name in enumerate(self.buffer_keys):
                 try:
                     # Calculate the batch size for the current buffer
                     if i < len(self.buffer_keys) - 1:

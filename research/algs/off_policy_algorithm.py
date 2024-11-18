@@ -110,11 +110,13 @@ class OffPolicyAlgorithm(Algorithm):
         else:
             discount = 1 - float(done)
 
+        source = "online"
+
         # Store the consequences.
         if isinstance(self.dataset, MultiReplayBuffer):
-            self.dataset.add(buffer_name="online", obs=next_obs, action=action, reward=reward, done=done, discount=discount)
+            self.dataset.add(buffer_name="online", obs=next_obs, action=action, reward=reward, done=done, discount=discount, source=source)
         else:
-            self.dataset.add(obs=next_obs, action=action, reward=reward, done=done, discount=discount)
+            self.dataset.add(obs=next_obs, action=action, reward=reward, done=done, discount=discount, source=source)
 
         if done:
             self._num_ep += 1

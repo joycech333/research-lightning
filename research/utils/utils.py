@@ -104,6 +104,46 @@ def get_from_batch(batch: Any, start: Union[int, np.ndarray, torch.Tensor], end:
     else:
         raise ValueError("Unsupported type passed to `get_from_batch`")
 
+def get_from_batch_key(batch: Any, key: str, value: Any) -> Any:
+    """
+    Filter elements from nested batch structure based on matching a key-value pair.
+    
+    Args:
+        batch: A nested structure of dictionaries, lists, tensors, or numpy arrays
+        key: String key to match against (e.g. "source")
+        value: Value to match (e.g. "offline")
+    
+    Returns:
+        Filtered batch containing only elements where batch[key] == value
+        For non-dict elements, returns filtered versions based on the mask from the parent scope
+    """
+    if key not in batch:
+        raise KeyError(f"Key '{key}' not found in batch")
+        
+    # Create boolean mask from matching key
+    if isinstance(batch[key], (np.ndarray, torch.Tensor)):
+        mask = (batch[key] == value).squeeze()
+    elif isinstance(batch[key], (list, tuple)):
+        mask = np.array([x == value for x in batch[key]])
+    else:
+        mask = batch[key] == value
+        
+    def _apply_filter(data: Any, mask: Union[bool, np.ndarray, torch.Tensor]) -> Any:
+        if isinstance(data, dict):
+            return {k: _apply_filter(v, mask) for k, v in data.items()}
+        elif isinstance(data, (list, tuple)):
+            return type(data)(_apply_filter(v, mask) for v in data)
+        elif isinstance(data, np.ndarray):
+            return data[mask]
+        elif isinstance(data, torch.Tensor):
+            return data[mask]
+        elif isinstance(data, h5py.Dataset):
+            return data[mask]
+        else:
+            return data
+            
+    return _apply_filter(batch, mask)
+
 def set_in_batch(batch: Any, value: Any, start: int, end: Optional[int] = None) -> None:
     if isinstance(batch, dict):
         for k, v in batch.items():
@@ -205,6 +245,7 @@ def concatenate(*args, dim: int = 0):
     elif isinstance(args[0], list) or isinstance(args[0], tuple):
         return [concatenate(*[arg[i] for arg in args], dim=dim) for i in range(len(args[0]))]
     elif isinstance(args[0], np.ndarray):
+        args = [arg if arg.ndim == args[0].ndim else np.expand_dims(arg, axis=dim) for arg in args]
         return np.concatenate(args, axis=dim)
     elif isinstance(args[0], torch.Tensor):
         return torch.concatenate(args, dim=dim)

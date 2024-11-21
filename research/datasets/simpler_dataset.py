@@ -46,7 +46,7 @@ class SimplerDataset(ReplayBuffer):
             reward_list = [0.0]
             discount_list = [1.0]
             done_list = [False]
-            source_list = ["offline"]
+            online_list = [False]
 
             for step_ind, step in enumerate(episode['steps']):
                 # Skip dummy step from RLDS
@@ -58,14 +58,14 @@ class SimplerDataset(ReplayBuffer):
                 reward = step['reward'].numpy()
                 discount = step['discount'].numpy()
                 done = False
-                source = "offline"
+                online = False
 
                 obs_list.append(observation)
                 action_list.append(action)
                 reward_list.append(reward)
                 discount_list.append(discount)
                 done_list.append(done)
-                source_list.append(source)
+                online_list.append(online)
 
             # Add extra dummy observation (this doesn't get used)
             obs_list.append(obs_list[-1])
@@ -77,7 +77,7 @@ class SimplerDataset(ReplayBuffer):
             reward = np.array(reward_list)
             discount = np.array(discount_list)
             done = np.array(done_list)
-            source = np.array(source_list)
+            online = np.array(online_list)
 
             # TODO: Manually designed reward
             """
@@ -96,6 +96,5 @@ class SimplerDataset(ReplayBuffer):
             
             obs_len = obs[next(iter(obs.keys()))].shape[0]
             assert all([len(obs[k]) == obs_len for k in obs.keys()])
-            assert obs_len == len(action) == len(reward) == len(done) == len(discount) == len(source)
-
-            yield dict(obs=obs, action=action, reward=reward, done=done, discount=discount, source=source)
+            assert obs_len == len(action) == len(reward) == len(done) == len(discount) == len(online)
+            yield dict(obs=obs, action=action, reward=reward, done=done, discount=discount, online=online)

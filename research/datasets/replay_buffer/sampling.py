@@ -116,7 +116,7 @@ def sample_qlearning(
 ):
     """
     Default sampling for reinforcement learning.
-    Returns (obs, action, reward, discount, next_obs) batches.
+    Returns (obs, action, reward, discount, next_obs, online) batches.
 
     Similar to the default `sample` method, but removes the sequence option and
     limits sampling to the keys used for RL.
@@ -143,6 +143,7 @@ def sample_qlearning(
 
     obs = utils.get_from_batch(storage["obs"], obs_idxs)
     action = utils.get_from_batch(storage["action"], action_idxs)
+    online = utils.get_from_batch(storage["online"], obs_idxs)
     reward = np.zeros(idxs.shape, dtype=np.float32)
     discount_batch = np.ones(idxs.shape, dtype=np.float32)
     for i in range(nstep):
@@ -150,7 +151,7 @@ def sample_qlearning(
         discount_batch *= discount * storage["discount"][idxs + i]
     next_obs = utils.get_from_batch(storage["obs"], next_obs_idxs)
 
-    return dict(obs=obs, action=action, reward=reward, discount=discount_batch, next_obs=next_obs)
+    return dict(obs=obs, action=action, reward=reward, discount=discount_batch, next_obs=next_obs, online=online)
 
 
 def sample_her(

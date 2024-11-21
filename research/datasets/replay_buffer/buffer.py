@@ -92,6 +92,7 @@ class ReplayBuffer(torch.utils.data.IterableDataset):
             "reward": 0.0,
             "done": False,
             "discount": 1.0,
+            "online": True,
         }
         flattened_buffer_space = utils.flatten_dict(buffer_space)
         if include_keys is not None:
@@ -255,9 +256,13 @@ class ReplayBuffer(torch.utils.data.IterableDataset):
     def add(self, **kwargs):
         assert self.capacity is not None, "Tried to extend to a static size buffer."
         # Preprocess here before adding to storage
-        if len(kwargs) == 1:
+        # since we are now accounting for the obs + source key... not the best way but oh well
+        if len(kwargs) == 2:
             assert "obs" in kwargs
+            assert "online" in kwargs
+            online = kwargs["online"]  # Save whether source of data online
             kwargs = self._get_dummy_transition(kwargs["obs"])
+            kwargs["online"] = online
             if self.stacked_obs:
                 kwargs["obs"] = utils.get_from_batch(kwargs["obs"], -1)
         else:

@@ -73,9 +73,9 @@ class OffPolicyAlgorithm(Algorithm):
             # we don't add to the dataset here.
             # This was done for better compatibility for offline to online learning.
             if isinstance(self.dataset, MultiReplayBuffer):    
-                self.dataset.add(buffer_name="online", obs=self._current_obs) # add only to online buffer
+                self.dataset.add(buffer_name="online", obs=self._current_obs, online=True) # add only to online buffer
             else:
-                self.dataset.add(obs=self._current_obs)  # add the first observation.
+                self.dataset.add(obs=self._current_obs, online=True)  # add the first observation.
             self.env_step = self._env_step
         else:
             raise ValueError("Invalid env passed")
@@ -110,14 +110,13 @@ class OffPolicyAlgorithm(Algorithm):
         else:
             discount = 1 - float(done)
 
-        source = "online"
+        online = True
 
         # Store the consequences.
         if isinstance(self.dataset, MultiReplayBuffer):
-            self.dataset.add(buffer_name="online", obs=next_obs, action=action, reward=reward, done=done, discount=discount, source=source)
+            self.dataset.add(buffer_name="online", obs=next_obs, action=action, reward=reward, done=done, discount=discount, online=online)
         else:
-            self.dataset.add(obs=next_obs, action=action, reward=reward, done=done, discount=discount, source=source)
-
+            self.dataset.add(obs=next_obs, action=action, reward=reward, done=done, discount=discount, online=online)
         if done:
             self._num_ep += 1
             # Compute metrics
@@ -126,10 +125,10 @@ class OffPolicyAlgorithm(Algorithm):
             )
             # Reset the environment
             self._current_obs = env.reset()
-            if isinstance(self.dataset, MultiReplayBuffer):    
-                self.dataset.add(buffer_name="online", obs=self._current_obs)
+            if isinstance(self.dataset, MultiReplayBuffer):
+                self.dataset.add(buffer_name="online", obs=self._current_obs, online=True)
             else:    
-                self.dataset.add(obs=self._current_obs) # Add the first timestep
+                self.dataset.add(obs=self._current_obs, online=True) # Add the first timestep
             self._episode_length = 0
             self._episode_reward = 0
             return metrics

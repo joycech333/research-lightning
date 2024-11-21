@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from research.networks.base import ActorCriticPolicy
+from research.utils.utils import get_from_batch_key
 
 from ..off_policy_algorithm import OffPolicyAlgorithm
 
@@ -72,6 +73,9 @@ class TD3(OffPolicyAlgorithm):
             target_q = batch["reward"] + batch["discount"] * target_q
 
         qs = self.network.critic(batch["obs"], batch["action"])
+        # Reshaping
+        target_q = target_q.view(-1)
+        qs = qs.squeeze(1)
         q_loss = torch.nn.functional.mse_loss(qs, target_q.expand(qs.shape[0], -1), reduction="none").mean()
 
         self.optim["critic"].zero_grad(set_to_none=True)
@@ -91,7 +95,12 @@ class TD3(OffPolicyAlgorithm):
         actor_loss = -q.mean()
 
         if self.bc_coeff > 0.0:
-            bc_loss = torch.nn.functional.mse_loss(action, batch["action"])
+            # Only get the batch elements which came from the demos
+            filtered_batch = get_from_batch_key(batch, "online", False)
+            mask = (batch["online"] == False).squeeze(0)
+            # Filter the actions to match filtered_batch
+            filtered_action = action.squeeze(0)[mask]
+            bc_loss = torch.nn.functional.mse_loss(filtered_action, filtered_batch["action"])
             actor_loss = actor_loss + self.bc_coeff * bc_loss
 
         self.optim["actor"].zero_grad(set_to_none=True)
@@ -105,7 +114,6 @@ class TD3(OffPolicyAlgorithm):
 
         if "obs" not in batch or step < self.random_steps:
             return all_metrics
-
         batch["obs"] = self.network.encoder(batch["obs"])
         with torch.no_grad():
             batch["next_obs"] = self.target_network.encoder(batch["next_obs"])
